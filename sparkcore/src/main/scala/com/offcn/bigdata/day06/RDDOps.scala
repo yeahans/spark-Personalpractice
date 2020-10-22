@@ -3,9 +3,6 @@ package com.offcn.bigdata.day06
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-
 object RDDOps {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf()
@@ -19,8 +16,62 @@ object RDDOps {
     // filterMapOps(sc)
     // sampleMapOps(sc)
     // unionMapOps(sc)
-    joinedMapOps(sc)
+    // joinedMapOps(sc)
+    // groupByKeyOps(sc)
+    cbk2GbkOps(sc)
 
+
+  }
+
+  // 模拟groupByKey
+  def cbk2GbkOps(sc:SparkContext): Unit ={
+    val stuList = List(
+      "白普州,1904-bd-bj",
+      "伍齐城,1904-bd-bj",
+      "曹佳,1904-bd-sz",
+      "刘文浪,1904-bd-wh",
+      "姚远,1904-bd-bj",
+      "匿名大哥,1904-bd-sz",
+      "欧阳龙生,1904-bd-sz"
+    )
+    val stuRDD = sc.parallelize(stuList)
+
+    val class2InfoRDD:RDD[(String,String)] = stuRDD.map{
+      line =>{}
+        val dotIndex = line.lastIndexOf(",")
+        val className = line.substring(dotIndex+1)
+        (className,line)
+    }
+
+    println("=============groupByKey==============")
+    val gbkRDD:RDD[(String,Iterable[String])] = class2InfoRDD.groupByKey()
+    gbkRDD.foreach(println)
+
+
+  }
+  def groupByKeyOps(sc:SparkContext): Unit ={
+    //stu表：id, name, gender, age, class
+    val stuList = List(
+      "1,白普州,1,22,1904-bd-bj",
+      "2,伍齐城,1,19,1904-bd-wh",
+      "3,曹佳,0,27,1904-bd-sz",
+      "4,姚远,1,27,1904-bd-bj",
+      "5,匿名大哥,2,17,1904-bd-wh",
+      "6,欧阳龙生,0,28,1904-bd-sz"
+    )
+    val stuRDD = sc.parallelize(stuList)
+
+    val class2InfoRDD:RDD[(String,String)] = stuRDD.map(
+      line=>{
+        val dotIndex = line.lastIndexOf(",")
+        val className = line.substring(dotIndex+1)
+        val info = line.substring(0,dotIndex)
+        (className,info)
+      }
+    )
+
+    val gbkRDD:RDD[(String,Iterable[String])] = class2InfoRDD.groupByKey()
+    gbkRDD.foreach(println)
 
   }
 
@@ -59,34 +110,32 @@ object RDDOps {
     // 查询有成绩的学生信息
     val stuScoreInfoRDD:RDD[(Int,(String,String))] = sid2StuInfoRDD.join(sid2ScoreInfoRDD)
     stuScoreInfoRDD.foreach {
-      case(sid,(stuInfo,scoreInfo))=>{
-        println(s"sid:${sid},stu's info: ${stuInfo}, stu's score: ${scoreInfo}")
-      }
+      case(sid,(stuInfo,scoreInfo))=>
+        println(s"sid:$sid,stu's info: $stuInfo, stu's score: $scoreInfo")
+
     }
 
     // 查询所有学生的信息
     val stuInfo:RDD[(Int,(String,Option[String]))] = sid2StuInfoRDD.leftOuterJoin(sid2ScoreInfoRDD)
     stuInfo.foreach{
-      case(sid,(stuInfo,scoreOption))=>{
-        println(s"sid:${sid},stu's info:${stuInfo},stu's score:${scoreOption.getOrElse(null)}")
-      }
+      case(sid,(stuInfo,scoreOption))=>
+        println(s"sid:${sid},stu's info:${stuInfo},stu's score:${scoreOption.orNull}")
+
     }
 
     // 查询学生，及其有成绩的学生信息
     val stuScoreInfo:RDD[(Int,(Option[String],Option[String]))] = sid2StuInfoRDD.fullOuterJoin(sid2ScoreInfoRDD)
     stuScoreInfo.foreach{
-      case(sid,(stuOption,scoreOption)) =>{
-        println(s"sid:${sid},stu's info:${stuOption.getOrElse(null)},stu's score:${scoreOption.getOrElse(null)}")
-      }
+      case(sid,(stuOption,scoreOption)) =>
+        println(s"sid:${sid},stu's info:${stuOption.orNull},stu's score:${scoreOption.orNull}")
+
     }
 
 
   }
 
-
   /**
    * 使用unoin会将两个集合的元素放在一起，不会去重
-   * @param sc
    */
   def unionMapOps(sc:SparkContext): Unit ={
     val listRDD1 = sc.parallelize(1.to(10))
@@ -100,7 +149,6 @@ object RDDOps {
    * 返回0到多个新的元素，these element make up a new RDD
    * map is one-2-one
    * flatMap is one to many operation
-   * @param sc
    */
   def flatMapOps(sc:SparkContext): Unit ={
     val list = List(
@@ -115,7 +163,6 @@ object RDDOps {
 
   /**
    * 过滤掉返回值为false的值
-   * @param sc
    */
   def filterMapOps(sc:SparkContext): Unit ={
     val list = 1.to(100)
@@ -129,7 +176,7 @@ object RDDOps {
    * @param sc
    *
    * 需要知道的参数
-   * @withReplacement 抽样的方式，true有放回抽样，false为无放回抽样
+   * withReplacement 抽样的方式，true有放回抽样，false为无放回抽样
    * fraction：抽样比例，取值范围是0到1之间
    * seed：抽样的随机数种子，有默认值，通常也不需要自己传值
    */
